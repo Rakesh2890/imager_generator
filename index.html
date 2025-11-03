@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Image Generator</title>
+    <link rel="stylesheet" href="style.css">
+
+    
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&family=Indie+Flower&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <div class="main-container">
+        <div class="container">
+
+            <!-- Header Section -->
+            <div class="headings-container">
+                <h1>🎨 AI Image Generator</h1>
+                
+                <h5 class="sub-heading">
+                    Type something below and let AI draw it for you!
+                    <br>
+                    (Get Your Imagination!)
+                </h5>
+            </div>
+
+            <!-- Input Form -->
+            <div id="generate-image-form" class="form-container">
+                <form class="my-form">
+                    <input id="input-value" 
+                           placeholder="e.g. A cat riding a skateboard" 
+                           type="text"
+                           class="form-input form-controls">
+
+                    <button type="submit" class="image-generate-btn form-controls">
+                        🎨 Generate Image
+                    </button>
+                </form>
+            </div>
+
+            <!-- Image Output Section -->
+            <div id="images-visible" class="image-container">
+                <p id="imageContainerText"></p>
+                <img id="generated-image" 
+                     class="my-generated-image" 
+                     src='' alt="AI Generated Image">
+            </div>
+
+            <!-- Small footer note -->
+            <footer class="footer">
+                <p></p>
+            </footer>
+        </div>
+    </div>
+
+    <script src="index.js"></script>
+</body>
+</html>

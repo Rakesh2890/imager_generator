@@ -1,0 +1,127 @@
+/* General Reset */
+body {
+    padding: 0;
+    margin: 0;
+    font-family: 'Poppins', sans-serif;
+    background: linear-gradient(135deg, #a8edea, #fed6e3);
+    box-sizing: border-box;
+}
+
+/* Center the main container */
+.main-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+}
+
+/* Card-like container */
+.container {
+    background-color: #fff;
+    padding: 30px;
+    border-radius: 15px;
+    width: 90%;
+    max-width: 600px;
+    box-shadow: 0 5px 25px rgba(0, 0, 0, 0.1);
+    text-align: center;
+}
+
+/* Headings */
+.headings-container h1 {
+    font-family: 'Indie Flower', cursive;
+    font-size: 2.2em;
+    color: #333;
+}
+
+.heading {
+    color: #ff6f61;
+    margin-top: 10px;
+    font-weight: 600;
+}
+
+.sub-heading {
+    color: #555;
+    font-size: 0.95em;
+    margin-top: 10px;
+}
+
+/* Form Styling */
+.form-container {
+    margin-top: 25px;
+}
+
+.form-controls {
+    padding: 10px;
+    border-radius: 8px;
+    border: 2px solid #ff6f61;
+    font-size: 1em;
+}
+
+.form-input {
+    width: 70%;
+    margin-right: 10px;
+}
+
+.form-input:focus {
+    outline: none;
+    border-color: #ff9a8b;
+}
+
+/* Button */
+.image-generate-btn {
+    background-color: #ff6f61;
+    color: #fff;
+    cursor: pointer;
+    border: none;
+    transition: all 0.3s ease;
+}
+
+.image-generate-btn:hover {
+    background-color: #ff9671;
+    transform: scale(1.05);
+}
+
+/* Image Container */
+.image-container {
+    margin: 30px 0;
+    display: none;
+}
+
+#imageContainerText {
+    color: #444;
+    margin-bottom: 10px;
+}
+
+.my-generated-image {
+    width: 100%;
+    max-width: 500px;
+    max-height: 450px;   /* Increased from auto — adds height */
+    height: auto;
+    border-radius: 12px;
+    object-fit: cover;
+    border: 3px dashed #ff6f61;
+    padding: 5px;
+    background-color: #fff5f5;
+    box-shadow: 0 5px 10px rgba(0, 0, 0, 0.1);
+}
+
+
+/* Footer */
+.footer {
+    margin-top: 20px;
+    font-size: 0.85em;
+    color: #888;
+    font-style: italic;
+}
+
+/* Responsive Design */
+@media screen and (max-width: 600px) {
+    .form-input {
+        width: 100%;
+        margin: 0 0 10px 0;
+    }
+
+    .image-generate-btn {
+        width: 100%;
+    }
+}
