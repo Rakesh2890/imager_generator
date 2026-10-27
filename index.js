@@ -1,104 +1,165 @@
-let generateImageForm = document.getElementById('generate-image-form');
-let formInput = document.getElementById('input-value');
-let imageContainerText = document.getElementById('imageContainerText');
-let imageGenerated = document.getElementById('generated-image');
-let imageContainer = document.getElementById('images-visible');
 
-function showContainerMessage(msg) {
-  imageContainer.style.display = "block";
-  imageContainerText.innerText = msg;
+const generateImageForm = document.getElementById("generate-image-form");
+const formInput = document.getElementById("input-value");
+const imageContainerText = document.getElementById("imageContainerText");
+const imageGenerated = document.getElementById("generated-image");
+const imageContainer = document.getElementById("images-visible");
+
+const API_BASE_URL = "/api";
+const POLL_INTERVAL_MS = 5000;
+const MAX_POLL_ATTEMPTS = 60;
+
+function showContainerMessage(message) {
+    imageContainer.style.display = "block";
+    imageContainerText.innerText = message;
 }
 
-// Start generation -> returns { task_id }
-async function startGeneration(prompt) {
-  const resp = await fetch("/api/generate-image", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ prompt })
-  });
-
-  const text = await resp.text();
-  let data;
-  try { data = text ? JSON.parse(text) : null; } catch (e) { data = null; }
-
-  if (!resp.ok) {
-    throw new Error(data?.message || `Server error (${resp.status})`);
-  }
-  return data; // { task_id, status }
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-// Poll status endpoint until done or timeout
-async function pollStatusAndFetchImage(taskId, onProgress) {
-  const pollInterval = 5000; // 5s between status checks (tune as needed)
-  const maxPolls = 60; // 60 * 5s = 300s total max (tune)
-  let attempts = 0;
+async function readResponse(response) {
+    const text = await response.text();
 
-  while (attempts < maxPolls) {
-    attempts++;
+    let data = {};
     try {
-      const resp = await fetch(`/api/status/${taskId}`);
-      if (!resp.ok) {
-        const txt = await resp.text().catch(()=>null);
-        throw new Error(txt || `Status check error ${resp.status}`);
-      }
-      const data = await resp.json();
-      // call progress callback if provided
-      if (onProgress) onProgress(data, attempts);
-
-      if (data.status === "COMPLETED" && Array.isArray(data.images) && data.images.length > 0) {
-        return data.images[0]; // return first image URL or data URI
-      }
-      if (data.status === "FAILED") {
-        throw new Error(data.message || "Generation failed");
-      }
-    } catch (err) {
-      console.warn("Status poll error:", err);
-      // continue polling unless we want to break on certain errors
+        data = text ? JSON.parse(text) : {};
+    } catch {
+        data = { message: text };
     }
-    await new Promise(r => setTimeout(r, pollInterval));
-  }
-  throw new Error("Timed out waiting for image");
+
+    if (!response.ok) {
+        throw new Error(
+            data.message ||
+            data.error ||
+            `Server error (${response.status})`
+        );
+    }
+
+    return data;
 }
 
-// Combined flow used by UI
-async function fetchImages(prompt) {
-  try {
-    showContainerMessage("🎨 Starting generation...");
-
-    const startData = await startGeneration(prompt);
-    console.log("Start response:", startData);
-
-    if (!startData || !startData.task_id) {
-      imageContainerText.innerText = startData?.message || "Failed to start generation";
-      return;
-    }
-
-    const taskId = startData.task_id;
-    showContainerMessage("⏳ Image generation started. Waiting for result...");
-
-    const imageUrl = await pollStatusAndFetchImage(taskId, (statusData, attempt) => {
-      // update UI with progress - you can make this nicer
-      imageContainerText.innerText = `⏳ Generating... (attempt ${attempt}) - status: ${statusData.status}`;
+// Start image generation.
+async function startGeneration(prompt) {
+    const response = await fetch(`${API_BASE_URL}/generate-image`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ prompt })
     });
 
-    // set image
-    imageGenerated.src = imageUrl;
-    imageContainerText.innerText = "✅ Here is your generated image:";
-  } catch (err) {
-    console.error("Generation flow error:", err);
-    imageContainerText.innerText = `Error: ${err.message || "Something went wrong"}`
-  }
+    const data = await readResponse(response);
+
+    if (!data.task_id) {
+        throw new Error(
+            data.message || data.error || "No task ID returned by the server."
+        );
+    }
+
+    return data;
 }
 
-// Form handler
-generateImageForm.addEventListener('submit', (e) => {
-  e.preventDefault();
-  const enteredText = formInput.value.trim();
-  if (enteredText) {
-    fetchImages(enteredText);
-  } else {
-    imageContainerText.innerText = "Input field cannot be empty!";
-    imageContainer.style.display = "block";
-    imageGenerated.src = "";
-  }
+// Poll the backend until Freepik finishes generating the image.
+async function pollStatusAndFetchImage(taskId) {
+    for (let attempt = 1; attempt <= MAX_POLL_ATTEMPTS; attempt++) {
+        showContainerMessage(
+            `⏳ Generating your image... (${attempt}/${MAX_POLL_ATTEMPTS})`
+        );
+
+        const response = await fetch(
+            `${API_BASE_URL}/status/${encodeURIComponent(taskId)}`
+        );
+
+        const data = await readResponse(response);
+
+        const images = data.images || [];
+
+        if (data.status === "COMPLETED" && images.length > 0) {
+            return images[0];
+        }
+
+        if (data.status === "FAILED") {
+            throw new Error(data.message || "Image generation failed.");
+        }
+
+        if (data.status === "NOT_FOUND") {
+            throw new Error("The generation task was not found by the backend.");
+        }
+
+        if (attempt < MAX_POLL_ATTEMPTS) {
+            await sleep(POLL_INTERVAL_MS);
+        }
+    }
+
+    throw new Error(
+        "Generation timed out after 5 minutes. Please try again."
+    );
+}
+
+// Validate and display the generated image.
+function displayGeneratedImage(imageUrl) {
+    return new Promise((resolve, reject) => {
+        imageGenerated.onload = () => resolve();
+        imageGenerated.onerror = () => {
+            reject(new Error("The generated image could not be loaded."));
+        };
+
+        imageGenerated.src = imageUrl;
+    });
+}
+
+// Main generation workflow.
+async function fetchImages(prompt) {
+    const submitButton = generateImageForm.querySelector(
+        'button[type="submit"], input[type="submit"]'
+    );
+
+    if (submitButton) {
+        submitButton.disabled = true;
+    }
+
+    imageGenerated.removeAttribute("src");
+    showContainerMessage("🎨 Starting image generation...");
+
+    try {
+        const startData = await startGeneration(prompt);
+
+        console.log("Generation started:", startData);
+
+        const imageUrl = await pollStatusAndFetchImage(startData.task_id);
+
+        showContainerMessage("🖼️ Loading your generated image...");
+
+        await displayGeneratedImage(imageUrl);
+
+        showContainerMessage("✅ Here is your generated image!");
+    } catch (error) {
+        console.error("Image generation error:", error);
+
+        showContainerMessage(
+            `Error: ${error.message || "Something went wrong. Please try again."}`
+        );
+
+        imageGenerated.removeAttribute("src");
+    } finally {
+        if (submitButton) {
+            submitButton.disabled = false;
+        }
+    }
+}
+
+// Handle form submission.
+generateImageForm.addEventListener("submit", event => {
+    event.preventDefault();
+
+    const prompt = formInput.value.trim();
+
+    if (!prompt) {
+        imageGenerated.removeAttribute("src");
+        showContainerMessage("Please enter a prompt before generating an image.");
+        return;
+    }
+
+    fetchImages(prompt);
 });
